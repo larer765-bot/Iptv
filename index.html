@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="fr" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Point d'accord - Lecteur IPTV Premium</title>
+    <!-- Tailwind CSS pour un design moderne de haut niveau -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- HLS.js pour lire tous les flux de streaming HLS (.m3u8) -->
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+    <!-- Fontes et Icônes de style moderne -->
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Plus Jakarta Sans', 'sans-serif'],
+                    },
+                    colors: {
+                        brand: {
+                            50: '#f5f3ff',
+                            100: '#e0e7ff',
+                            500: '#6366f1',
+                            600: '#4f46e5',
+                            700: '#4338ca',
+                            950: '#030712',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <style>
+        * {
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            -webkit-tap-highlight-color: transparent;
+        }
+        ::-webkit-scrollbar {
+            width: 5px;
+            height: 5px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(3, 7, 18, 0.5);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(99, 102, 241, 0.3);
+            border-radius: 999px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(99, 102, 241, 0.7);
+        }
+        .glow-button {
+            box-shadow: 0 0 15px rgba(99, 102, 241, 0.4);
+        }
+        .glow-button:hover {
+            box-shadow: 0 0 25px rgba(99, 102, 241, 0.8);
+        }
+        .whatsapp-glow {
+            box-shadow: 0 0 15px rgba(34, 197, 94, 0.4);
+        }
+        .whatsapp-glow:hover {
+            box-shadow: 0 0 25px rgba(34, 197, 94, 0.8);
+        }
+    </style>
+</head>
+<body class="bg-slate-950 text-slate-100 h-full font-sans flex flex-col overflow-hidden">
+
+    <!-- En-tête / Barre supérieure -->
+    <header class="bg-slate-950/75 backdrop-blur-xl border-b border-slate-900 px-6 py-4 flex flex-col md:flex-row justify-between items-center gap-4 shrink-0 z-20">
+        <div class="flex items-center gap-3">
+            <div class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-indigo-600 via-purple-600 to-pink-500 flex items-center justify-center shadow-lg shadow-indigo-500/30 animate-pulse">
+                <i class="fa-solid fa-play text-xl text-white ml-1"></i>
+            </div>
+            <div>
+                <h1 class="text-2xl font-extrabold tracking-tight bg-gradient-to-r from-white via-slate-200 to-indigo-400 bg-clip-text text-transparent">Point d'accord</h1>
+                <p class="text-xs text-indigo-400/80 font-semibold tracking-wider uppercase">Lecteur IPTV de Lare</p>
+            </div>
+        </div>
+        
+        <!-- Outils d'importation de sources -->
+        <div class="flex items-center gap-3 w-full md:w-auto justify-end">
+            <button onclick="openSourceModal()" class="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-2xl transition duration-200 shadow-md glow-button flex items-center gap-2">
+                <i class="fa-solid fa-plug"></i>
+                <span>Ajouter une Source / Code</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- Zone principale -->
+    <main class="flex-1 flex flex-col lg:flex-row overflow-hidden relative">
+        
+        <!-- Lecteur Vidéo principal (Gauche) -->
+        <section class="flex-1 flex flex-col p-4 lg:p-6 overflow-y-auto">
+            <!-- Conteneur vidéo au format cinématographique -->
+            <div class="relative bg-black rounded-3xl overflow-hidden shadow-2xl border border-slate-900 aspect-video w-full group">
+                <video id="video-player" class="w-full h-full object-contain" controls autoplay playsinline></video>
+                
+                <!-- Écran d'attente / Chargement -->
+                <div id="video-loader" class="absolute inset-0 bg-slate-950/90 backdrop-blur-md flex flex-col items-center justify-center gap-3 opacity-0 pointer-events-none transition-opacity duration-300">
+                    <div class="relative flex items-center justify-center">
+                        <div class="w-16 h-16 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
+                        <i class="fa-solid fa-tv absolute text-indigo-400 text-lg animate-pulse"></i>
+                    </div>
+                    <p class="text-sm font-semibold text-slate-300 tracking-wide mt-2">Point d'accord se connecte au flux...</p>
+                </div>
+            </div>
+
+            <!-- Informations sur le programme actuel -->
+            <div class="mt-4 bg-slate-900/40 backdrop-blur-md border border-slate-900/80 rounded-2xl p-5 flex items-center justify-between gap-4">
+                <div class="flex items-center gap-4 min-w-0">
+                    <div id="current-logo" class="w-14 h-14 bg-slate-950 rounded-2xl border border-slate-800 flex items-center justify-center text-2xl overflow-hidden shrink-0 shadow-inner">
+                        📺
+                    </div>
+                    <div class="min-w-0">
+                        <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 uppercase tracking-wider mb-1">En Direct</span>
+                        <h2 id="current-channel-name" class="text-xl font-bold text-white truncate leading-snug">Aucune chaîne sélectionnée</h2>
+                        <p id="current-channel-group" class="text-xs font-semibold text-slate-400 truncate mt-0.5">Veuillez choisir une chaîne à droite</p>
+                    </div>
+                </div>
+                <!-- Bouton d'ajout aux favoris -->
+                <button id="btn-favorite" onclick="toggleCurrentFavorite()" class="p-3.5 bg-slate-900 hover:bg-slate-800 border border-slate-800 rounded-2xl text-xl hover:scale-105 active:scale-95 transition-all text-slate-400 hover:text-yellow-400">
+                    <i class="fa-regular fa-star"></i>
+                </button>
+            </div>
+        </section>
+
+        <!-- Liste de chaînes et Recherche (Droite) -->
+        <aside class="w-full lg:w-[380px] bg-slate-950/50 backdrop-blur-lg border-t lg:border-t-0 lg:border-l border-slate-900 flex flex-col overflow-hidden shrink-0">
+            <!-- Recherche & Catégories -->
+            <div class="p-4 border-b border-slate-900 flex flex-col gap-3">
+                <!-- Barre de recherche moderne -->
+                <div class="relative">
+                    <i class="fa-solid fa-magnifying-glass absolute left-4 top-3.5 text-slate-500 text-sm"></i>
+                    <input type="text" id="search-bar" oninput="filterChannels()" placeholder="Rechercher une chaîne..." class="w-full bg-slate-900/60 border border-slate-800/80 text-sm pl-11 pr-4 py-3 rounded-2xl focus:outline-none focus:ring-2 focus:ring-indigo-500 text-slate-100 placeholder-slate-500">
+                </div>
+                
+                <!-- Sélecteur de groupe -->
+                <div class="relative">
+                    <i class="fa-solid fa-folder absolute left-4 top-3.5 text-indigo-400 text-sm"></i>
+                    <select id="category-filter" onchange="filterChannels()" class="w-full bg-slate-900/60 border border-slate-800/80 text-xs pl-11 pr-4 py-3.5 rounded-2xl focus:outline-none focus:ring-2 focus:ring-indigo-500 text-slate-200 cursor-pointer appearance-none">
+                        <option value="all">📁 Tous les groupes</option>
+                        <option value="favorites">⭐ Mes Favoris</option>
+                    </select>
+                    <i class="fa-solid fa-chevron-down absolute right-4 top-4 text-slate-500 pointer-events-none text-xs"></i>
+                </div>
+            </div>
+
+            <!-- Liste dynamique -->
+            <div class="flex-1 overflow-y-auto p-4">
+                <ul id="channel-list" class="space-y-2"></ul>
+                
+                <!-- État vide -->
+                <div id="empty-state" class="flex flex-col items-center justify-center text-center py-16 px-4">
+                    <div class="w-16 h-16 rounded-full bg-slate-900 flex items-center justify-center mb-4">
+                        <i class="fa-solid fa-satellite-dish text-2xl text-indigo-500"></i>
+                    </div>
+                    <p class="text-sm font-semibold text-slate-300">Aucune liste disponible</p>
+                    <p class="text-xs text-slate-500 mt-2 max-w-[240px]">Appuyez sur "Ajouter une Source" pour importer votre liste de chaînes .M3U, Xtream Codes ou Portail Stalker.</p>
+                </div>
+            </div>
+        </aside>
+    </main>
+
+    <!-- MODAL DE CONNEXION MULTI-SOURCE (M3U / XTREAM / STALKER) -->
+    <div id="source-modal" class="fixed inset-0 bg-black/80 backdrop-blur-xl z-50 flex items-center justify-center opacity-0 pointer-events-none transition-all duration-300 p-4">
+        <div class="bg-slate-900/90 border border-slate-800 rounded-3xl max-w-lg w-full overflow-hidden shadow-2xl relative">
+            <button onclick="closeSourceModal()" class="absolute top-5 right-5 text-slate-400 hover:text-white text-lg">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+
+            <!-- Titre du Modal -->
+            <div class="p-6 border-b border-slate-800">
+                <h3 class="text-xl font-bold bg-gradient-to-r from-white to-indigo-400 bg-clip-text text-transparent flex items-center gap-2">
+                    <i class="fa-solid fa-plug text-indigo-500"></i> Ajouter une Playlist / Flux
+                </h3>
+                <p class="text-xs text-slate-500 mt-1">Choisissez votre méthode d'importation favorite ci-dessous</p>
+            </div>
+
+            <!-- Onglets de connexion -->
+            <div class="flex border-b border-slate-800 text-xs font-semibold">
+                <button onclick="switchTab('tab-m3u')" id="btn-tab-m3u" class="flex-1 py-4 text-center border-b-2 border-indigo-500 text-indigo-400 bg-slate-950/20">Lien .M3U / Fichier</button>
+                <button onclick="switchTab('tab-xtream')" id="btn-tab-xtream" class="flex-1 py-4 text-center border-b-2 border-transparent text-slate-400 hover:text-white">Xtream Codes</button>
+                <button onclick="switchTab('tab-stalker')" id="btn-tab-stalker" class="flex-1 py-4 text-center border-b-2 border-transparent text-slate-400 hover:text-white">Stalker Portal</button>
+            </div>
+
+            <!-- Contenus des onglets -->
+            <div class="p-6 space-y-4">
+                
+                <!-- Onglet 1 : M3U -->
+                <div id="tab-m3u" class="space-y-4">
+                    <div class="space-y-2">
+                        <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider">Lien HTTP de votre liste .m3u / .m3u8</label>
+                        <input type="text" id="m3u-url-modal" placeholder="https://votre-fournisseur.com/get.php?auth=..." class="w-full bg-slate-950 border border-slate-800 rounded-2xl px-4 py-3.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 text-slate-100 placeholder-slate-600">
+                    </div>
+                    <div class="relative flex py-2 items-center">
+                        <div class="flex-grow border-t border-slate-800"></div>
+                        <span class="flex-shrink mx-4 text-slate-600 text-[10px] font-bold uppercase tracking-widest">OU</span>
+                        <div class="flex-grow border-t border-slate-800"></div>
+                    </div>
+                    <div class="flex justify-center">
+                        <label class="w-full px-4 py-3.5 bg-slate-950 hover:bg-slate-800 border border-slate-800 text-slate-300 text-xs font-bold rounded-2xl cursor-pointer transition text-center">
+                            <i class="fa-solid fa-file-invoice mr-1.5 text-indigo-500"></i> Choisir un fichier .m3u local
+                            <input type="file" id="m3u-file-modal" accept=".m3u,.m3u8" class="hidden" onchange="loadFromFile(event)">
+                        </label>
+                    </div>
+                    <button onclick="loadM3UFromModal()" class="w-full py-4 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-bold rounded-2xl transition duration-200 shadow-lg glow-button">
+                        <i class="fa-solid fa-circle-check mr-2"></i>Charger la Playlist M3U
+                    </button>
+                </div>
+
+                <!-- Onglet 2 : Xtream Codes -->
+                <div id="tab-xtream" class="space-y-4 hidden">
+                    <div class="space-y-2">
+                        <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider">Adresse du serveur (URL)</label>
+                        <input type="text" id="xtream-host" placeholder="http://serveur-iptv.com:8080" class="w-full bg-slate-950 border border-slate-800 rounded-2xl px-4 py-3.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 text-slate-100 placeholder-slate-600">
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="space-y-2">
+                            <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider">Identifiant (Username)</label>
+                            <input type="text" id="xtream-user" placeholder="Nom d'utilisateur" class="w-full bg-slate-950 border border-slate-800 rounded-2xl px-4 py-3.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 text-slate-100 placeholder-slate-600">
+                        </div>
+                        <div class="space-y-2">
+                            <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider">Mot de passe (Password)</label>
+                            <input type="password" id="xtream-pass" placeholder="••••••••" class="w-full bg-slate-950 border border-slate-800 rounded-2xl px-4 py-3.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 text-slate-100 placeholder-slate-600">
+                        </div>
+                    </div>
+                    <button onclick="loadXtreamCodes()" class="w-full py-4 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-bold rounded-2xl transition duration-200 shadow-lg glow-button">
+                        <i class="fa-solid fa-plug mr-2"></i>Se connecter via Xtream Codes
+                    </button>
+                </div>
+
+                <!-- Onglet 3 : Stalker Portal -->
+                <div id="tab-stalker" class="space-y-4 hidden">
+                    <div class="space-y-2">
+                        <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider">URL du Portail Stalker</label>
+                        <input type="text" id="stalker-url" placeholder="http://stalker-portal.com/c/" class="w-full bg-slate-950 border border-slate-800 rounded-2xl px-4 py-3.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 text-slate-100 placeholder-slate-600">
+                    </div>
+                    <div class="space-y-2">
+                        <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider">Adresse MAC autorisée</label>
+                        <input type="text" id="stalker-mac" placeholder="00:1A:79:XX:XX:XX" class="w-full bg-slate-950 border border-slate-800 rounded-2xl px-4 py-3.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 text-slate-100 placeholder-slate-600">
+                    </div>
+                    <button onclick="loadStalker()" class="w-full py-4 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-bold rounded-2xl transition duration-200 shadow-lg glow-button">
+                        <i class="fa-solid fa-network-wired mr-2"></i>Se connecter via Stalker Portal
+                    </button>
+                </div>
+
+                <!-- Option de contournement CORS intégrée -->
+                <div class="p-3 bg-slate-950/60 rounded-xl border border-slate-800 text-[11px] text-slate-400 flex items-start gap-2">
+                    <i class="fa-solid fa-shield-halved text-indigo-400 mt-0.5 shrink-0"></i>
+                    <p>Note : Certains serveurs IPTV nécessitent d'utiliser un proxy CORS pour être lus directement dans le navigateur. L'application intègre automatiquement un proxy si nécessaire.</p>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- Pied de page & Contact Créateur Lare -->
+    <footer class="bg-slate-950 border-t border-slate-900 px-6 py-4 flex flex-col sm:flex-row justify-between items-center gap-4 shrink-0 z-20">
+        <div class="flex items-center gap-2">
+            <span class="text-xs text-slate-400">© 2026 Point d'accord. Propulsé par</span>
+            <span class="text-xs font-bold bg-gradient-to-r from-indigo-400 to-pink-500 bg-clip-text text-transparent">Lare</span>
+        </div>
+        
+        <!-- Bouton WhatsApp Style moderne -->
+        <a href="https://wa.me/22893602761?text=Bonjour%20Lare,%20je%20vous%20contacte%20depuis%20l'application%20Point%20d'accord." target="_blank" class="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-2xl flex items-center gap-2 transition duration-200 whatsapp-glow">
+            <i class="fa-brands fa-whatsapp text-lg"></i>
+            <span>Contacter Lare sur WhatsApp</span>
+        </a>
+    </footer>
+
+    <!-- Conteneur des toasts pour les notifications -->
+    <div id="toast-container" class="fixed bottom-6 right-6 z-50 pointer-events-none flex flex-col gap-2"></div>
+
+    <script>
+        // Variables d'état globales
+        let channels = [];
+        let categories = new Set();
+        let favorites = JSON.parse(localStorage.getItem('pointaccord_favorites')) || [];
+        let currentChannel = null;
+
+        // Liste gratuite et légale par défaut au démarrage
+        const defaultPlaylist = `#EXTM3U
+#EXTINF:-1 tvg-logo="https://raw.githubusercontent.com/orion-iptv/logos/master/logos/france24.png" group-title="Actualités",France 24 (FR)
+https://static.france24.com/live/F24_FR_LO_HLS/live_web.m3u8
+#EXTINF:-1 tvg-logo="https://raw.githubusercontent.com/orion-iptv/logos/master/logos/euronews.png" group-title="Actualités",Euronews (FR)
+https://euronews-euronews-french-1-be.samsung.wurl.tv/playlist.m3u8
+#EXTINF:-1 tvg-logo="https://www.nasa.gov/wp-content/uploads/2015/06/nasa-logo-web-rgb.png" group-title="Sciences & Espace",NASA TV Live
+https://nasa-otter.amagi.tv/playlist.m3u8
+#EXTINF:-1 tvg-logo="https://github.com/orion-iptv/logos/raw/master/logos/arte.png" group-title="Culture & Doc",ARTE Concert (FR)
+https://artelive-lh.akamaihd.net/i/artelive_fr@393599/index_1_av-p.m3u8`;
+
+        // Évitement des blocages CORS via Proxy standard si nécessaire
+        const corsProxy = "https://cors-anywhere.herokuapp.com/";
+
+        // Fonctions d'affichage du Modal
+        function openSourceModal() {
+            const modal = document.getElementById('source-modal');
+            modal.classList.remove('opacity-0', 'pointer-events-none');
+        }
+
+        function closeSourceModal() {
+            const modal = document.getElementById('source-modal');
+            modal.classList.add('opacity-0', 'pointer-events-none');
+        }
+
+        // Bascule entre les onglets de connexion
